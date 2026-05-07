@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Daily Brief Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    label { display: block; margin-top: 1rem; font-weight: 600; }
+    input, textarea { width: 100%; padding: 0.5rem; margin-top: 0.25rem; font: inherit; }
+    textarea { min-height: 80px; }
+    button { margin-top: 1.5rem; padding: 0.75rem 1.5rem; font: inherit; cursor: pointer; }
+    .status { margin-top: 1rem; font-size: 0.9rem; }
+    .status.ok { color: green; }
+    .status.error { color: darkred; }
+  </style>
+</head>
+<body>
+  <h1>Publish Daily Brief</h1>
+  <p>Fill this out once per day. Submitting creates a new row in the <code>briefs</code> table.</p>
+
+  <form id="briefForm">
+    <label>
+      Date label (what users see)
+      <input type="text" name="date_label" placeholder="Thursday, May 8, 2026" required />
+    </label>
+
+    <label>
+      Headline
+      <input type="text" name="headline" placeholder="Stocks climb as yields ease" required />
+    </label>
+
+    <label>
+      Summary
+      <textarea name="summary" placeholder="2–3 sentences summarizing the day." required></textarea>
+    </label>
+
+    <label>
+      Mood
+      <input type="text" name="mood" placeholder="Cautiously bullish" />
+    </label>
+
+    <label>
+      Theme
+      <input type="text" name="theme" placeholder="Rates & earnings" />
+    </label>
+
+    <label>
+      Watch item
+      <input type="text" name="watch_item" placeholder="Tomorrow: jobs report at 8:30am ET" />
+    </label>
+
+    <label>
+      Top stories (one per line)
+      <textarea name="stories" placeholder="- S&P 500 hits new high
+- Fed minutes show no rush to cut"></textarea>
+    </label>
+
+    <label>
+      Why it matters
+      <textarea name="why_matters" placeholder="Short explanation of what today means for investors."></textarea>
+    </label>
+
+    <label>
+      Watch tomorrow
+      <textarea name="watch_tomorrow" placeholder="What to watch tomorrow / setup."></textarea>
+    </label>
+
+    <button type="submit">Publish brief</button>
+    <div id="status" class="status"></div>
+  </form>
+
+  <script>
+    const SUPABASE_URL = 'YOUR_PROJECT_URL_HERE';
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';
+
+    const form = document.getElementById('briefForm');
+    const statusEl = document.getElementById('status');
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      statusEl.textContent = 'Publishing...';
+      statusEl.className = 'status';
+
+      const formData = new FormData(form);
+      const payload = {
+        date_label: formData.get('date_label'),
+        headline: formData.get('headline'),
+        summary: formData.get('summary'),
+        mood: formData.get('mood') || null,
+        theme: formData.get('theme') || null,
+        watch_item: formData.get('watch_item') || null,
+        stories: formData.get('stories') || null,
+        why_matters: formData.get('why_matters') || null,
+        watch_tomorrow: formData.get('watch_tomorrow') || null,
+      };
+
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/briefs', {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          statusEl.textContent = 'Error: ' + errText;
+          statusEl.className = 'status error';
+          return;
+        }
+
+        const data = await res.json();
+        statusEl.textContent = 'Published! Row id: ' + (data[0]?.id || '(no id returned)');
+        statusEl.className = 'status ok';
+        form.reset();
+      } catch (err) {
+        statusEl.textContent = 'Network or JS error: ' + err.message;
+        statusEl.className = 'status error';
+      }
+    });
+  </script>
+</body>
+</html>
