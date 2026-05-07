@@ -340,8 +340,91 @@ Bond yields stayed important to the market conversation.</textarea>
 
   <script>
     (function(){
+            // ScarletFinance Daily Brief – Supabase config
+      const SUPABASE_URL = 'https://cucvttmnxmfutgdpqtbv.supabase.co/rest/v1/';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Y3Z0dG1ueG1mdXRnZHBxdGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjE2NTIsImV4cCI6MjA5MzY5NzY1Mn0.4pfXM2bOUuXgJGh9fW0lkmwniAxE33TCjRJI_TxFvjY
+';
       const root=document.documentElement;
       const toggle=document.querySelector('[data-theme-toggle]');
+            async function loadLatestBrief() {
+        try {
+          const res = await fetch(
+            SUPABASE_URL + '/rest/v1/briefs?select=*&order=published_at.desc&limit=1',
+            {
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+              },
+            }
+          );
+
+          if (!res.ok) {
+            console.warn('Failed to load latest brief from Supabase');
+            return;
+          }
+
+          const rows = await res.json();
+          if (!rows || !rows.length) {
+            console.warn('No briefs found in Supabase yet');
+            return;
+          }
+
+          const b = rows[0];
+
+          // Today’s brief hero
+          const heroDate = document.getElementById('heroDate');
+          const heroTitle = document.getElementById('heroTitle');
+          const heroSummary = document.getElementById('heroSummary');
+          const briefMood = document.getElementById('briefMood');
+          const briefTheme = document.getElementById('briefTheme');
+          const briefWatch = document.getElementById('briefWatch');
+          const topStoriesList = document.getElementById('topStoriesList');
+          const whyMattersBlock = document.getElementById('whyMattersBlock');
+          const watchTomorrowBlock = document.getElementById('watchTomorrowBlock');
+
+          if (heroDate && b.date_label) heroDate.textContent = b.date_label;
+          if (heroTitle && b.headline) heroTitle.textContent = b.headline;
+          if (heroSummary && b.summary) heroSummary.textContent = b.summary;
+          if (briefMood && b.mood) briefMood.textContent = b.mood;
+          if (briefTheme && b.theme) briefTheme.textContent = b.theme;
+          if (briefWatch && b.watch_item) briefWatch.textContent = b.watch_item;
+
+          if (topStoriesList && b.stories) {
+            const lines = b.stories.split('\n').map(s => s.trim()).filter(Boolean);
+            topStoriesList.innerHTML = lines
+              .map(line => `<li><strong>${line}</strong></li>`)
+              .join('');
+          }
+
+          if (whyMattersBlock && b.why_matters) {
+            whyMattersBlock.innerHTML = `<p>${b.why_matters}</p>`;
+          }
+
+          if (watchTomorrowBlock && b.watch_tomorrow) {
+            watchTomorrowBlock.innerHTML = `<p>${b.watch_tomorrow}</p>`;
+          }
+
+          // Archive: prepend one card for this brief
+          const archiveList = document.getElementById('archiveList');
+          if (archiveList) {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'archive-item is-active';
+            item.innerHTML = `
+              <div class="tiny-meta">${b.date_label || ''} · Daily brief</div>
+              <strong>${b.headline || ''}</strong>
+              <span>${b.summary || ''}</span>
+            `;
+            // remove active from previous items
+            archiveList.querySelectorAll('.archive-item').forEach(el =>
+              el.classList.remove('is-active')
+            );
+            archiveList.prepend(item);
+          }
+        } catch (err) {
+          console.error('Error loading latest brief', err);
+        }
+      }
       let theme=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
       function renderTheme(){
         root.setAttribute('data-theme',theme);
@@ -439,6 +522,7 @@ Bond yields stayed important to the market conversation.</textarea>
       });
 
       renderPreview();
+            loadLatestBrief();
     })();
   </script>
 </body>
